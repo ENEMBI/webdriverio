@@ -15,7 +15,7 @@ RUN firefox -v
 #RUN apt-get install -y microsoft-edge-stable
 #RUN microsoft-edge --version
 #clone repository
-#RUN git clone https://github.com/AZANIR/wdioTestActionsAsync.git
+#RUN git clone https://github.com/ENEMBI/webdriverio.git
 #RUN cp -R ./wdioTestActionsAsync/. ./
 #local files
 COPY ./ ./
