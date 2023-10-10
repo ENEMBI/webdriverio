@@ -1,0 +1,78 @@
+name: $(Date:yyyy-MM-dd) WebUI-Tests
+
+schedules:
+- cron: "0 */2 * * *"
+  displayName: 'Run every 2 hours'
+  branches:
+    include:
+    - master  # Replace this with your main branch
+
+trigger: none
+
+pr:
+  branches:
+    include:
+    - master
+
+jobs:
+- job: BuildAndTest
+  displayName: 'Build and Test'
+  pool:
+    vmImage: 'ubuntu-20.04'  # Use Ubuntu 20.04 image
+  steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '18.x'
+      checkLatest: true
+  - script: |
+      npm install
+      npm run test
+      npm run allure:generate
+    displayName: 'Install, Test, and Generate report'
+
+  - task: PublishTestResults@2
+    displayName: "Publish Test Results"
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/junit-results/**/*'
+      searchFolder: '$(Build.SourcesDirectory)'
+      mergeTestResults: false
+      failTaskOnFailedTests: true
+
+  - task: CopyFiles@2
+    displayName: Collect junit-results
+    condition: always()
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)'
+      contents: '**/junit-results/**'
+      flattenFolders: true
+      targetFolder: '$(Build.ArtifactStagingDirectory)/junit-results/'
+
+  - task: CopyFiles@2
+    displayName: Collect allure-report
+    condition: always()
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)/allure-report/'
+      contents: '**'
+      targetFolder: '$(Build.ArtifactStagingDirectory)/allure-report/'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Save junit-results
+    condition: always()
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)/junit-results/'
+      artifactName: junit-reports
+
+  - pwsh: |
+      Compress-Archive -Path "$(Build.ArtifactStagingDirectory)/allure-report/" `
+          -DestinationPath "$(Build.ArtifactStagingDirectory)/allure-report-$(Build.BuildId).zip"
+    displayName: Archive allure-report
+    condition: always()
+
+  - task: PublishBuildArtifacts@1
+    displayName: Save allure-report
+    condition: always()
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)/allure-report-$(Build.BuildId).zip'
+      artifactName: allure-report
